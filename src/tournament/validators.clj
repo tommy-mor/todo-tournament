@@ -2,19 +2,20 @@
   (:require [tommy-mor.trail :as t]
             [com.blockether.spel.core :as spel]
             [com.blockether.spel.page :as page]
-            [com.blockether.spel.snapshot :as snapshot]))
+            [com.blockether.spel.locator :as loc]
+            [com.blockether.spel.snapshot :as snapshot])
+  (:import [com.microsoft.playwright.options AriaRole]))
 
 ;; ---------------------------------------------------------------------------
 ;; Browser state — held in an atom, closed over by action navigators
 ;; ---------------------------------------------------------------------------
 
 (def ^:private *page* (atom nil))
-(def ^:private *browser* (atom nil))
 
 (defn- snap-els!
-  "Take an ARIA snapshot of the current page, return flat list of element maps."
+  "Take an ARIA snapshot, return flat list of element maps with :id."
   []
-  (let [snap (snapshot/snapshot @*page* {:interactive true})]
+  (let [snap (snapshot/capture-snapshot @*page* {:interactive? true})]
     (->> (:refs snap)
          (map (fn [[id attrs]] (assoc attrs :id (name id))))
          vec)))
@@ -33,25 +34,29 @@
 (defn fill [text]
   {:name (str "fill(\"" text "\")")
    :match (fn [els]
-            (let [ref (str "@" (:id (first els)))]
-              (page/fill @*page* ref text)
+            (let [ref (str "@" (:id (first els)))
+                  locator (page/get-by-ref @*page* ref)]
+              (loc/fill locator text)
               (snap-els!)))})
 
 (def click
   {:name "click"
    :match (fn [els]
-            (let [ref (str "@" (:id (first els)))]
-              (page/click @*page* ref)
+            (let [ref (str "@" (:id (first els)))
+                  locator (page/get-by-ref @*page* ref)]
+              (loc/click locator)
               (snap-els!)))})
 
 (defn press [key]
   {:name (str "press(" key ")")
-   :match (fn [_]
-            (page/press @*page* "body" key)
-            (snap-els!))})
+   :match (fn [els]
+            (let [ref (str "@" (:id (first els)))
+                  locator (page/get-by-ref @*page* ref)]
+              (loc/press locator key)
+              (snap-els!)))})
 
 ;; ---------------------------------------------------------------------------
-;; Lifecycle — wrap validator runs in a browser session
+;; Lifecycle
 ;; ---------------------------------------------------------------------------
 
 (defmacro with-browser [& body]
