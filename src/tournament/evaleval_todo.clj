@@ -29,35 +29,35 @@
 (defn add-form []
   [:form {:id "add-form" :action "/" :method "post"}
    (e/snippet-inputs "(tournament.evaleval-todo/add $new-todo)")
-   [:input {:type "text" :name "new-todo" :placeholder "What needs to be done?" :autocomplete "off"}]
-   [:button {:type "submit"} "Add"]])
+   [:input.todo-new-input {:type "text" :name "new-todo" :placeholder "What needs to be done?" :autocomplete "off"}]
+   [:button {:type "submit" :style "display:none"} "Add"]])
 
 (defn todo-item [t]
-  [:li {:id (str "todo-" (:id t))}
-   [:form {:action "/" :method "post" :style "display:inline"}
+  [:li.todo-item {:id (str "todo-" (:id t)) :class (when (:done t) "todo-item todo-item--done")}
+   [:form {:action "/" :method "post" :style "display:contents"}
     (e/snippet-inputs (str "(tournament.evaleval-todo/toggle \"" (:id t) "\")"))
-    [:input {:type "checkbox" :checked (when (:done t) true)}]]
-   [:span {:style (when (:done t) "text-decoration:line-through")} (:text t)]
-   [:form {:action "/" :method "post" :style "display:inline"}
+    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}]]
+   [:span {:class (when (:done t) "todo-item__text--done")} (:text t)]
+   [:form {:action "/" :method "post" :style "display:contents"}
     (e/snippet-inputs (str "(tournament.evaleval-todo/delete-todo \"" (:id t) "\")"))
-    [:button {:type "submit"} "×"]]])
+    [:button.todo-item__delete {:type "submit"} "×"]]])
 
 (defn todo-list []
-  [:ul {:id "todo-list"}
+  [:ul.todo-list {:id "todo-list"}
    (map todo-item (visible))])
 
 (defn count-display []
-  [:span {:id "count"} (str (count (remove :done @todos)) " items left")])
+  [:span.todo-footer__count {:id "count"} (str (count (remove :done @todos)) " items left")])
 
 (defn filter-buttons []
-  [:div {:id "filters"}
+  [:div.todo-filters {:id "filters"}
    (for [[label f] [["All" "all"] ["Active" "active"] ["Completed" "completed"]]]
-     [:form {:action "/" :method "post" :style "display:inline"}
+     [:form {:action "/" :method "post" :style "display:contents"}
       (e/snippet-inputs (str "(tournament.evaleval-todo/set-filter \"" f "\")"))
-      [:button {:type "submit"} label]])])
+      [:button.todo-filter__btn {:type "submit"} label]])])
 
 (defn footer []
-  [:footer {:id "footer"}
+  [:footer.todo-footer {:id "footer"}
    (when (seq @todos)
      (list (count-display) (filter-buttons)))])
 
@@ -66,12 +66,14 @@
    [:head
     [:meta {:charset "utf-8"}]
     [:title "TodoMVC — evaleval"]
+    [:link {:rel "stylesheet" :href "/tournament.css"}]
     [:script {:src "/evaleval.js" :defer true}]]
    [:body
-    [:h1 "todos"]
-    (add-form)
-    (todo-list)
-    (footer)]])
+    [:div.todo-app
+     [:h1.todo-app__title "todos"]
+     (add-form)
+     (todo-list)
+     (footer)]]])
 
 ;; ---------------------------------------------------------------------------
 ;; Handlers (called via eval — must be in this ns's scope)

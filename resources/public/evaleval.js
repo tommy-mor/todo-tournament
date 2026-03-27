@@ -19,6 +19,8 @@ async function _submit(form) {
   });
   const t = await r.text();
   if (t && t.trim()) eval(t);
+  const input = document.querySelector('#add-form input[name=new-todo]');
+  if (input) input.focus();
 }
 
 document.addEventListener('submit', async e => {
