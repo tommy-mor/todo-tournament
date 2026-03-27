@@ -1,0 +1,10 @@
+[project]
+name = "python-evaleval"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.9",
+    "evaleval>=0.2.3",
+]

@@ -1,4 +1,4 @@
-(ns tournament.evaleval
+(ns evaleval.core
   (:require [clojure.string :as str]
             [dev.onionpancakes.chassis.core :as chassis]
             [org.httpkit.server :as http-kit]
