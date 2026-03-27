@@ -26,37 +26,56 @@
 ;; Components
 ;; ---------------------------------------------------------------------------
 
-(defn add-form []
-  [:form {:id "add-form" :action "/" :method "post"}
-   (e/snippet-inputs (e/server (add $new-todo)))
-   [:input.todo-new-input {:type "text" :name "new-todo" :placeholder "What needs to be done?" :autocomplete "off"}]
-   [:button {:type "submit" :style "display:none"} "Add"]])
+(defn footer []
+  [:footer.todo-footer {:id "footer"}
+   (when (seq @todos)
+     (list
+      [:span.todo-footer__count {:id "count"}
+       (str (count (remove :done @todos)) " items left")]
+      [:div.todo-filters {:id "filters"}
+       (for [[label f] [["All" :all] ["Active" :active] ["Completed" :completed]]]
+         (e/form
+          (e/server
+           (do (reset! filt ~f)
+               (e/js (e/morph "#todo-list" (todo-list))
+                     (e/morph "#footer" (footer)))))
+          [:button.todo-filter__btn {:type "submit"} label]))]))])
 
 (defn todo-item [t]
-  [:li.todo-item {:id (str "todo-" (:id t)) :class (when (:done t) "todo-item todo-item--done")}
-   (e/form (e/snippet-inputs (e/server (toggle (:id t))))
-           [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}])
+  [:li.todo-item {:id (str "todo-" (:id t))
+                  :class (when (:done t) "todo-item todo-item--done")}
+   (e/form
+    (e/server
+     (do (swap! todos (fn [ts] (mapv #(if (= ~(:id t) (:id %)) (update % :done not) %) ts)))
+         (e/js (e/morph ~(str "#todo-" (:id t))
+                        (todo-item (first (filter #(= ~(:id t) (:id %)) @todos))))
+               (e/morph "#footer" (footer)))))
+    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}])
    [:span {:class (when (:done t) "todo-item__text--done")} (:text t)]
-   (e/form (e/snippet-inputs (e/server (delete-todo (:id t))))
-           [:button.todo-item__delete {:type "submit"} "×"])])
+   (e/form
+    (e/server
+     (do (swap! todos (fn [ts] (vec (remove #(= ~(:id t) (:id %)) ts))))
+         (e/js (e/remove-el ~(str "#todo-" (:id t)))
+               (e/morph "#footer" (footer)))))
+    [:button.todo-item__delete {:type "submit"} "×"])])
 
 (defn todo-list []
   [:ul.todo-list {:id "todo-list"}
    (map todo-item (visible))])
 
-(defn count-display []
-  [:span.todo-footer__count {:id "count"} (str (count (remove :done @todos)) " items left")])
-
-(defn filter-buttons []
-  [:div.todo-filters {:id "filters"}
-   (for [[label f] [["All" "all"] ["Active" "active"] ["Completed" "completed"]]]
-     (e/form (e/snippet-inputs (e/server (set-filter f)))
-             [:button.todo-filter__btn {:type "submit"} label]))])
-
-(defn footer []
-  [:footer.todo-footer {:id "footer"}
-   (when (seq @todos)
-     (list (count-display) (filter-buttons)))])
+(defn add-form []
+  [:form {:id "add-form" :action "/" :method "post"}
+   (e/server
+    (let [text (str/trim $new-todo)]
+      (when-not (str/blank? text)
+        (swap! todos conj {:id (rand-id) :text text :done false}))
+      (e/js (e/morph "#add-form" (add-form))
+            (when-not (str/blank? text)
+              (e/append "#todo-list" (todo-item (last @todos))))
+            (e/morph "#footer" (footer)))))
+   [:input.todo-new-input {:type "text" :name "new-todo"
+                           :placeholder "What needs to be done?" :autocomplete "off"}]
+   [:button {:type "submit" :style "display:none"} "Add"]])
 
 (defn page []
   [:html
@@ -73,32 +92,6 @@
      (footer)]]])
 
 ;; ---------------------------------------------------------------------------
-;; Handlers (called via eval — must be in this ns's scope)
-;; ---------------------------------------------------------------------------
-
-(defn add [text]
-  (let [t {:id (rand-id) :text (str/trim text) :done false}]
-    (when-not (str/blank? text)
-      (swap! todos conj t))
-    (e/js (e/morph "#add-form" (add-form))
-          (when-not (str/blank? text) (e/append "#todo-list" (todo-item t)))
-          (e/morph "#footer" (footer)))))
-
-(defn delete-todo [id]
-  (swap! todos (fn [ts] (vec (remove #(= id (:id %)) ts))))
-  (e/js (e/remove-el (str "#todo-" id))
-        (e/morph "#footer" (footer))))
-
-(defn toggle [id]
-  (swap! todos (fn [ts] (mapv #(if (= id (:id %)) (update % :done not) %) ts)))
-  (e/js (e/morph (str "#todo-" id) (todo-item (first (filter #(= id (:id %)) @todos))))))
-
-(defn set-filter [f]
-  (reset! filt (keyword f))
-  (e/js (e/morph "#todo-list" (todo-list))
-        (e/morph "#filters" (filter-buttons))))
-
-;; ---------------------------------------------------------------------------
 ;; Ring routes + server
 ;; ---------------------------------------------------------------------------
 
@@ -113,17 +106,17 @@
   {:status 200 :body ""})
 
 (defn router [req]
-  (case [(:request-method req) (:uri req)]
-    [:get  "/"]      (get-handler req)
-    [:post "/"]      (e/handler req)
-    [:get  "/reset"] (reset-state req)
-    [:post "/reset"] (reset-state req)
-    {:status 404 :body "not found"}))
+  (binding [e/*eval-ns* (find-ns 'tournament.evaleval-todo)]
+    (case [(:request-method req) (:uri req)]
+      [:get  "/"]      (get-handler req)
+      [:post "/"]      (e/handler req)
+      [:get  "/reset"] (reset-state req)
+      [:post "/reset"] (reset-state req)
+      {:status 404 :body "not found"})))
 
 (def app
   (-> router
       params/wrap-params
       (resource/wrap-resource "public")))
 
-;; start on port 4002
 (def server (e/start! app 4002))

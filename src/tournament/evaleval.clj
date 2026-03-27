@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [dev.onionpancakes.chassis.core :as chassis]
             [org.httpkit.server :as http-kit]
+            [riddley.walk :as rw]
             [ring.util.response :as resp])
   (:import [javax.crypto Mac]
            [javax.crypto.spec SecretKeySpec]))
@@ -55,20 +56,29 @@
 (defn js [& stmts]   (resp/response (str/join ";" (remove nil? stmts))))
 
 ;; ---------------------------------------------------------------------------
-;; server macro — resolves fn to FQN at expand time, pr-strs runtime args,
-;; passes $tokens through as interpolation placeholders
+;; server macro — walk form with Riddley, replacing ~expr with gensym
+;; placeholders, pr-str the whole thing, then str/replace at render time.
+;;
+;;   ~expr  → embed render-time value as a Clojure literal (pr-str'd)
+;;   $token → interpolation placeholder for form field (left as-is)
 ;; ---------------------------------------------------------------------------
 
-(defmacro server [form]
-  (let [[fn-sym & args] form
-        fqn (str *ns* "/" fn-sym)]
-    `(str "(" ~fqn
-          ~@(map (fn [arg]
-                   (if (and (symbol? arg) (str/starts-with? (str arg) "$"))
-                     (str " " arg)
-                     `(str " " (pr-str ~arg))))
-                 args)
-          ")")))
+(defmacro server
+  "Produces a signed [:input type=hidden] embedding the serialized body as a
+   Clojure snippet. Use ~expr to embed render-time values; $name for form fields."
+  [& body]
+  (let [form   (if (= 1 (count body)) (first body) (list* 'do body))
+        pairs  (atom [])
+        xform  (rw/walk-exprs
+                #(and (seq? %) (= 'clojure.core/unquote (first %)))
+                #(let [g (gensym "u")] (swap! pairs conj [g (second %)]) g)
+                form)
+        code   (pr-str xform)
+        ;; Generate (str/replace code placeholder (pr-str expr)) chain
+        signed (reduce (fn [expr [g e]] `(str/replace ~expr ~(str g) (pr-str ~e)))
+                       code
+                       @pairs)]
+    `[:input {:type "hidden" :name "evaleval-snippet" :value (sign ~signed)}]))
 
 ;; ---------------------------------------------------------------------------
 ;; Form helper — defaults to POST / with display:contents (inline in flow)
@@ -78,22 +88,21 @@
   (into [:form {:action "/" :method "post" :style "display:contents"}] children))
 
 ;; ---------------------------------------------------------------------------
-;; Snippet embed
-;; ---------------------------------------------------------------------------
-
-(defn snippet-inputs [code-str]
-  [:input {:type "hidden" :name "evaleval-snippet" :value (sign code-str)}])
-
-;; ---------------------------------------------------------------------------
 ;; POST handler
 ;; ---------------------------------------------------------------------------
+
+(def ^:dynamic *eval-ns*
+  "Namespace in which snippets are eval'd. Bind to the app ns so that
+   symbols like `todos`, `str/trim`, `e/js` resolve correctly."
+  nil)
 
 (defn handler [req]
   (let [params  (merge (:form-params req) (:params req))
         signed  (get params "evaleval-snippet")
         code    (verify! signed)
         interp  (interpolate code (dissoc params "evaleval-snippet"))]
-    (eval (read-string interp))))
+    (binding [*ns* (or *eval-ns* *ns*)]
+      (eval (read-string interp)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Server start
