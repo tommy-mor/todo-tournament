@@ -72,10 +72,10 @@
       (e/js (e/morph "#add-form" (add-form))
             (when-not (str/blank? text)
               (e/append "#todo-list" (todo-item (last @todos))))
-            (e/morph "#footer" (footer)))))
+            (e/morph "#footer" (footer))
+            (e/raw "document.querySelector('[autofocus]').focus()"))))
    [:input.todo-new-input {:type "text" :name "new-todo"
-                           :placeholder "What needs to be done?" :autocomplete "off"
-                           :autofocus true}]
+                           :placeholder "What needs to be done?" :autocomplete "off"}]
    [:button {:type "submit" :style "display:none"} "Add"]])
 
 (defn page []

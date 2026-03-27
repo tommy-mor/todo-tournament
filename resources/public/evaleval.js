@@ -6,9 +6,6 @@ async function _submit(form) {
   });
   const t = await r.text();
   if (t && t.trim()) eval(t);
-  // autofocus is only processed by browsers on initial page load, not DOM updates
-  const af = document.querySelector('[autofocus]');
-  if (af && af !== document.activeElement) af.focus();
 }
 
 document.addEventListener('submit', async e => {
