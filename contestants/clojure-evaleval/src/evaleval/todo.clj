@@ -1,5 +1,5 @@
-(ns tournament.evaleval-todo
-  (:require [tournament.evaleval :as e]
+(ns evaleval.todo
+  (:require [evaleval.core :as e]
             [clojure.string :as str]
             [ring.middleware.params :as params]
             [ring.middleware.resource :as resource]))
@@ -109,7 +109,7 @@
   {:status 200 :body ""})
 
 (defn router [req]
-  (binding [e/*eval-ns* (find-ns 'tournament.evaleval-todo)]
+  (binding [e/*eval-ns* (find-ns 'evaleval.todo)]
     (case [(:request-method req) (:uri req)]
       [:get  "/"]      (get-handler req)
       [:post "/"]      (e/handler req)
@@ -121,5 +121,3 @@
   (-> router
       params/wrap-params
       (resource/wrap-resource "public")))
-
-(def server (e/start! app 4002))
