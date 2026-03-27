@@ -1,5 +1,6 @@
 (ns tournament.evaleval
   (:require [clojure.string :as str]
+            [dev.onionpancakes.chassis.core :as chassis]
             [org.httpkit.server :as http-kit]
             [ring.util.response :as resp])
   (:import [javax.crypto Mac]
@@ -38,34 +39,11 @@
                (fn [[_ k]] (pr-str (get form-params k "")))))
 
 ;; ---------------------------------------------------------------------------
-;; Hiccup renderer
+;; Hiccup renderer — delegates to chassis (transitive dep via hyper)
 ;; ---------------------------------------------------------------------------
 
-(def ^:private void-tags #{:area :base :br :col :embed :hr :img :input :link :meta :param :source :track :wbr})
-
-(defn render [x]
-  (cond
-    (nil? x)    ""
-    (string? x) x
-    (number? x) (str x)
-    (seq? x)    (apply str (map render x))
-    (vector? x)
-    (let [[tag & rest] x
-          attrs  (when (map? (first rest)) (first rest))
-          children (if attrs (drop 1 rest) rest)
-          tag-name (name tag)
-          attr-str (when attrs
-                     (str/join "" (for [[k v] attrs
-                                        :when (and v (not= v false))]
-                                    (if (true? v)
-                                      (str " " (name k))
-                                      (str " " (name k) "=\"" v "\"")))))]
-      (if (void-tags tag)
-        (str "<" tag-name attr-str ">")
-        (str "<" tag-name attr-str ">"
-             (apply str (map render children))
-             "</" tag-name ">")))
-    :else (str x)))
+(defn render [hiccup]
+  (chassis/html hiccup))
 
 ;; ---------------------------------------------------------------------------
 ;; JS DSL
