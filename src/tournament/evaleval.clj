@@ -50,7 +50,7 @@
 ;; JS DSL
 ;; ---------------------------------------------------------------------------
 
-(defn morph     [sel h] (str "_morph('" sel "',`" (render h) "`)"))
+(defn morph     [sel h] (str "Idiomorph.morph(document.querySelector('" sel "'),`" (render h) "`)"))
 (defn append    [sel h] (str "document.querySelector('" sel "').insertAdjacentHTML('beforeend',`" (render h) "`)"))
 (defn remove-el [sel]   (str "document.querySelector('" sel "').remove()"))
 (defn raw       [js]    js)

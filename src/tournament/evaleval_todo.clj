@@ -84,6 +84,7 @@
     [:meta {:charset "utf-8"}]
     [:title "TodoMVC — evaleval"]
     [:link {:rel "stylesheet" :href "/tournament.css"}]
+    [:script {:src "/idiomorph.min.js"}]
     [:script {:src "/evaleval.js" :defer true}]]
    [:body
     [:div.todo-app
