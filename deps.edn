@@ -3,6 +3,7 @@
         tommy-mor/spy {:git/url "git@github.com:tommy-mor/spy.git"
                        :git/sha "6af77a701de6b98c81d8bcb9bc702d0233299d75"
                        :deps/root "spy"}
+        com.blockether/spel {:mvn/version "0.7.7"}
         com.aayushatharva.brotli4j/native-osx-aarch64 {:mvn/version "1.20.0"}}
  :aliases {:nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.3.0"}}
                    :main-opts ["-m" "nrepl.cmdline"]}}}
