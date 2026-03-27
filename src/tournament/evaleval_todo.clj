@@ -74,7 +74,8 @@
               (e/append "#todo-list" (todo-item (last @todos))))
             (e/morph "#footer" (footer)))))
    [:input.todo-new-input {:type "text" :name "new-todo"
-                           :placeholder "What needs to be done?" :autocomplete "off"}]
+                           :placeholder "What needs to be done?" :autocomplete "off"
+                           :autofocus true}]
    [:button {:type "submit" :style "display:none"} "Add"]])
 
 (defn page []
