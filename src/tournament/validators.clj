@@ -198,6 +198,17 @@
     (t/name-match #"(?i)^all$")]
    []))
 
+(defn v-state-preserved [url]
+  (t/validate
+   [(reset-app url)
+    (open url)
+    (t/role "textbox") (fill "buy milk") (press "Enter")
+    (t/role "checkbox") t/unchecked (click)
+    (t/role "checkbox") t/checked
+    (open url)
+    (t/role "checkbox") t/checked]
+   []))
+
 (defn v-input-refocused [url]
   (t/validate
    [(reset-app url)
@@ -221,6 +232,7 @@
    #'v-delete-todo
    #'v-count-display
    #'v-filter-buttons
+   #'v-state-preserved
    #'v-input-refocused])
 
 (defn run-all! [url]
