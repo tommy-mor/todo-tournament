@@ -80,6 +80,20 @@
               (Thread/sleep 150)
               (snap-els!)))})
 
+(def focused
+  {:name "focused"
+   :match (fn [els]
+            (when (empty? els)
+              (throw (ex-info "Cannot check focus: no elements matched." {})))
+            (when (> (count els) 1)
+              (throw (ex-info (str "Ambiguous focused: " (count els) " elements matched.") {})))
+            (let [ref     (str "@" (:id (first els)))
+                  locator (page/get-by-ref *page* ref)
+                  active? (.evaluate locator "el => el === document.activeElement" nil)]
+              (when-not active?
+                (throw (ex-info (str "Element is not focused: " (:name (first els))) {})))
+              els))})
+
 ;; ---------------------------------------------------------------------------
 ;; Lifecycle
 ;; ---------------------------------------------------------------------------
@@ -184,6 +198,14 @@
     (t/name-match #"(?i)^all$")]
    []))
 
+(defn v-input-refocused [url]
+  (t/validate
+   [(reset-app url)
+    (open url)
+    (t/role "textbox") (fill "buy milk") (press "Enter")
+    (t/role "textbox") focused]
+   []))
+
 ;; ---------------------------------------------------------------------------
 ;; Runner
 ;; ---------------------------------------------------------------------------
@@ -197,8 +219,9 @@
    "add-three"      v-add-three
    "complete-todo"  v-complete-todo
    "delete-todo"    v-delete-todo
-   "count-display"  v-count-display
-   "filter-buttons" v-filter-buttons})
+   "count-display"   v-count-display
+   "filter-buttons"  v-filter-buttons
+   "input-refocused" v-input-refocused})
 
 (defn run-all! [url]
   (with-browser

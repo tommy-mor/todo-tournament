@@ -55,6 +55,29 @@
 (defn js [& stmts]   (resp/response (str/join ";" (remove nil? stmts))))
 
 ;; ---------------------------------------------------------------------------
+;; server macro — resolves fn to FQN at expand time, pr-strs runtime args,
+;; passes $tokens through as interpolation placeholders
+;; ---------------------------------------------------------------------------
+
+(defmacro server [form]
+  (let [[fn-sym & args] form
+        fqn (str *ns* "/" fn-sym)]
+    `(str "(" ~fqn
+          ~@(map (fn [arg]
+                   (if (and (symbol? arg) (str/starts-with? (str arg) "$"))
+                     (str " " arg)
+                     `(str " " (pr-str ~arg))))
+                 args)
+          ")")))
+
+;; ---------------------------------------------------------------------------
+;; Form helper — defaults to POST / with display:contents (inline in flow)
+;; ---------------------------------------------------------------------------
+
+(defn form [& children]
+  (into [:form {:action "/" :method "post" :style "display:contents"}] children))
+
+;; ---------------------------------------------------------------------------
 ;; Snippet embed
 ;; ---------------------------------------------------------------------------
 

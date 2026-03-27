@@ -28,19 +28,17 @@
 
 (defn add-form []
   [:form {:id "add-form" :action "/" :method "post"}
-   (e/snippet-inputs "(tournament.evaleval-todo/add $new-todo)")
+   (e/snippet-inputs (e/server (add $new-todo)))
    [:input.todo-new-input {:type "text" :name "new-todo" :placeholder "What needs to be done?" :autocomplete "off"}]
    [:button {:type "submit" :style "display:none"} "Add"]])
 
 (defn todo-item [t]
   [:li.todo-item {:id (str "todo-" (:id t)) :class (when (:done t) "todo-item todo-item--done")}
-   [:form {:action "/" :method "post" :style "display:contents"}
-    (e/snippet-inputs (str "(tournament.evaleval-todo/toggle \"" (:id t) "\")"))
-    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}]]
+   (e/form (e/snippet-inputs (e/server (toggle (:id t))))
+           [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}])
    [:span {:class (when (:done t) "todo-item__text--done")} (:text t)]
-   [:form {:action "/" :method "post" :style "display:contents"}
-    (e/snippet-inputs (str "(tournament.evaleval-todo/delete-todo \"" (:id t) "\")"))
-    [:button.todo-item__delete {:type "submit"} "×"]]])
+   (e/form (e/snippet-inputs (e/server (delete-todo (:id t))))
+           [:button.todo-item__delete {:type "submit"} "×"])])
 
 (defn todo-list []
   [:ul.todo-list {:id "todo-list"}
@@ -52,9 +50,8 @@
 (defn filter-buttons []
   [:div.todo-filters {:id "filters"}
    (for [[label f] [["All" "all"] ["Active" "active"] ["Completed" "completed"]]]
-     [:form {:action "/" :method "post" :style "display:contents"}
-      (e/snippet-inputs (str "(tournament.evaleval-todo/set-filter \"" f "\")"))
-      [:button.todo-filter__btn {:type "submit"} label]])])
+     (e/form (e/snippet-inputs (e/server (set-filter f)))
+             [:button.todo-filter__btn {:type "submit"} label]))])
 
 (defn footer []
   [:footer.todo-footer {:id "footer"}
