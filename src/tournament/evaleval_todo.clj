@@ -27,18 +27,18 @@
 
 (defn add-form []
   [:form {:id "add-form" :action "/" :method "post"}
-   (e/snippet-inputs "add($new-todo)")
+   (e/snippet-inputs "tournament.evaleval-todo/add($new-todo)")
    [:input {:type "text" :name "new-todo" :placeholder "What needs to be done?" :autocomplete "off"}]
    [:button {:type "submit"} "Add"]])
 
 (defn todo-item [t]
   [:li {:id (str "todo-" (:id t))}
    [:form {:action "/" :method "post" :style "display:inline"}
-    (e/snippet-inputs (str "toggle \"" (:id t) "\""))
-    [:button {:type "submit"} (if (:done t) "☑" "☐")]]
+    (e/snippet-inputs (str "tournament.evaleval-todo/toggle \"" (:id t) "\""))
+    [:input {:type "checkbox" :checked (when (:done t) true)}]]
    [:span {:style (when (:done t) "text-decoration:line-through")} (:text t)]
    [:form {:action "/" :method "post" :style "display:inline"}
-    (e/snippet-inputs (str "delete-todo \"" (:id t) "\""))
+    (e/snippet-inputs (str "tournament.evaleval-todo/delete-todo \"" (:id t) "\""))
     [:button {:type "submit"} "×"]]])
 
 (defn todo-list []
@@ -52,7 +52,7 @@
   [:div {:id "filters"}
    (for [[label f] [["All" "all"] ["Active" "active"] ["Completed" "completed"]]]
      [:form {:action "/" :method "post" :style "display:inline"}
-      (e/snippet-inputs (str "set-filter \"" f "\""))
+      (e/snippet-inputs (str "tournament.evaleval-todo/set-filter \"" f "\""))
       [:button {:type "submit"} label]])])
 
 (defn page []
