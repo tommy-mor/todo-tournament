@@ -114,7 +114,13 @@
 ;; Routes
 ;; ---------------------------------------------------------------------------
 
+(defn reset-state [_]
+  (reset! (todos*) [])
+  (reset! (filter*) :all)
+  {:status 200 :body ""})
+
 (def routes
   [["/" {:name  :home
          :title "TodoMVC — Hyper"
-         :get   #'page}]])
+         :get   #'page}]
+   ["/reset" {:post #'reset-state}]])

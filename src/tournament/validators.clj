@@ -7,15 +7,16 @@
   (:import [com.microsoft.playwright.options AriaRole]))
 
 ;; ---------------------------------------------------------------------------
-;; Browser state — held in an atom, closed over by action navigators
+;; Browser state — dynamic var, rebound per test via with-browser
 ;; ---------------------------------------------------------------------------
 
-(def ^:private *page* (atom nil))
+(def ^:dynamic *page* nil)
 
 (defn- snap-els!
   "Take an ARIA snapshot, return flat list of element maps with :id."
   []
-  (let [snap (snapshot/capture-snapshot @*page* {:interactive? true})]
+  (page/wait-for-load-state *page* :networkidle)
+  (let [snap (snapshot/capture-snapshot *page* {:interactive? true})]
     (->> (:refs snap)
          (map (fn [[id attrs]] (assoc attrs :id (name id))))
          vec)))
@@ -28,30 +29,52 @@
 (defn open [url]
   {:name (str "open(" url ")")
    :match (fn [_]
-            (page/navigate @*page* url)
+            (page/navigate *page* url)
+            (snap-els!))})
+
+(defn reset-app [url]
+  {:name (str "reset-app(" url ")")
+   :match (fn [_]
+            (page/navigate *page* (str url "/reset"))
+            (page/navigate *page* url)
             (snap-els!))})
 
 (defn fill [text]
   {:name (str "fill(\"" text "\")")
    :match (fn [els]
+            (when (empty? els)
+              (throw (ex-info "Cannot fill: no elements matched." {})))
+            (when (> (count els) 1)
+              (throw (ex-info (str "Ambiguous fill: " (count els) " elements matched.")
+                              {:count (count els) :elements els})))
             (let [ref (str "@" (:id (first els)))
-                  locator (page/get-by-ref @*page* ref)]
+                  locator (page/get-by-ref *page* ref)]
               (loc/fill locator text)
               (snap-els!)))})
 
-(def click
+(defn click []
   {:name "click"
    :match (fn [els]
+            (when (empty? els)
+              (throw (ex-info "Cannot click: no elements matched." {})))
+            (when (> (count els) 1)
+              (throw (ex-info (str "Ambiguous click: " (count els) " elements matched.")
+                              {:count (count els) :elements els})))
             (let [ref (str "@" (:id (first els)))
-                  locator (page/get-by-ref @*page* ref)]
+                  locator (page/get-by-ref *page* ref)]
               (loc/click locator)
               (snap-els!)))})
 
 (defn press [key]
   {:name (str "press(" key ")")
    :match (fn [els]
+            (when (empty? els)
+              (throw (ex-info "Cannot press: no elements matched." {})))
+            (when (> (count els) 1)
+              (throw (ex-info (str "Ambiguous press: " (count els) " elements matched.")
+                              {:count (count els) :elements els})))
             (let [ref (str "@" (:id (first els)))
-                  locator (page/get-by-ref @*page* ref)]
+                  locator (page/get-by-ref *page* ref)]
               (loc/press locator key)
               (snap-els!)))})
 
@@ -61,11 +84,21 @@
 
 (defmacro with-browser [& body]
   `(spel/with-testing-page [pg#]
-     (reset! *page* pg#)
-     (try
-       ~@body
-       (finally
-         (reset! *page* nil)))))
+     (binding [*page* pg#]
+       ~@body)))
+
+;; ---------------------------------------------------------------------------
+;; Failure reporting
+;; ---------------------------------------------------------------------------
+
+(defn report-failure [test-name result]
+  (binding [*out* *err*]
+    (println (str "\n=== FAIL: " test-name " ==="))
+    (println (str "error: " (:message result)))
+    (when-let [snap (:snapshot result)]
+      (println "aria-snapshot-at-failure:")
+      (println snap))
+    (println (str "fix: make the '" test-name "' validator pass by editing the app code.\n"))))
 
 ;; ---------------------------------------------------------------------------
 ;; Validators — each is one trail path
@@ -73,22 +106,23 @@
 
 (defn v-empty-state [url]
   (t/validate
-   [(open url) (t/absent (t/role "listitem"))]
+   [(reset-app url) (open url) (t/absent (t/role "listitem"))]
    []))
 
 (defn v-has-input [url]
   (t/validate
-   [(open url) (t/role "textbox")]
+   [(reset-app url) (open url) (t/role "textbox")]
    []))
 
 (defn v-has-heading [url]
   (t/validate
-   [(open url) (t/role "heading")]
+   [(reset-app url) (open url) (t/role "heading")]
    []))
 
 (defn v-add-todo [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "buy milk")
     (press "Enter")
     (t/role "listitem")]
@@ -96,7 +130,8 @@
 
 (defn v-add-todo-text [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "buy milk")
     (press "Enter")
     (t/name-match #"buy milk")]
@@ -104,7 +139,8 @@
 
 (defn v-add-three [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "buy milk") (press "Enter")
     (t/role "textbox") (fill "walk dog") (press "Enter")
     (t/role "textbox") (fill "write code") (press "Enter")
@@ -113,23 +149,26 @@
 
 (defn v-complete-todo [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "buy milk") (press "Enter")
-    (t/role "checkbox") t/unchecked click
+    (t/role "checkbox") t/unchecked (click)
     (t/role "checkbox") t/checked]
    []))
 
 (defn v-delete-todo [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "buy milk") (press "Enter")
-    (t/role "button") (t/name-match #"×|delete|remove") click
+    (t/role "button") (t/name-match #"×|delete|remove") (click)
     (t/absent (t/role "listitem"))]
    []))
 
 (defn v-count-display [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "alpha") (press "Enter")
     (t/role "textbox") (fill "beta") (press "Enter")
     (t/name-match #"2.*item")]
@@ -137,7 +176,8 @@
 
 (defn v-filter-buttons [url]
   (t/validate
-   [(open url)
+   [(reset-app url)
+    (open url)
     (t/role "textbox") (fill "x") (press "Enter")
     (t/name-match #"(?i)^all$")]
    []))
@@ -169,7 +209,9 @@
         (let [result (validator url)]
           (if (:ok result)
             (println "ok")
-            (println (str "FAIL: " (:message result)))))
+            (do
+              (println (str "FAIL: " (:message result)))
+              (report-failure vname result))))
         (catch Exception e
           (println (str "ERROR: " (.getMessage e))))))
     (println)))

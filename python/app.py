@@ -167,3 +167,11 @@ async def clear_completed():
     global TODOS
     TODOS = [t for t in TODOS if not t["done"]]
     return RedirectResponse("/", status_code=303)
+
+
+@app.post("/reset")
+async def reset():
+    global TODOS, FILTER
+    TODOS = []
+    FILTER = "all"
+    return RedirectResponse("/", status_code=303)
