@@ -50,7 +50,7 @@
             (let [ref (str "@" (:id (first els)))
                   locator (page/get-by-ref *page* ref)]
               (loc/fill locator text)
-              (snap-els!)))})
+              els))})
 
 (defn click []
   {:name "click"
@@ -63,6 +63,7 @@
             (let [ref (str "@" (:id (first els)))
                   locator (page/get-by-ref *page* ref)]
               (loc/click locator)
+              (Thread/sleep 150)
               (snap-els!)))})
 
 (defn press [key]
@@ -76,6 +77,7 @@
             (let [ref (str "@" (:id (first els)))
                   locator (page/get-by-ref *page* ref)]
               (loc/press locator key)
+              (Thread/sleep 150)
               (snap-els!)))})
 
 ;; ---------------------------------------------------------------------------
