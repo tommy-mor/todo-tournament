@@ -13,9 +13,3 @@ document.addEventListener('submit', async e => {
   await _submit(e.target);
 });
 
-document.addEventListener('change', async e => {
-  if (e.target.type === 'checkbox') {
-    const form = e.target.closest('form');
-    if (form) await _submit(form);
-  }
-});

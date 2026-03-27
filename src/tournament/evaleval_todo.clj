@@ -50,7 +50,8 @@
          (e/js (e/morph ~(str "#todo-" (:id t))
                         (todo-item (first (filter #(= ~(:id t) (:id %)) @todos))))
                (e/morph "#footer" (footer)))))
-    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}]]
+    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)
+                               :onchange "this.form.requestSubmit()"}]]
    [:span {:class (when (:done t) "todo-item__text--done")} (:text t)]
    [:form {:method "post" :style "display:contents"}
     (e/server
