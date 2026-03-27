@@ -211,36 +211,37 @@
 ;; ---------------------------------------------------------------------------
 
 (def all-validators
-  {"empty-state"    v-empty-state
-   "has-input"      v-has-input
-   "has-heading"    v-has-heading
-   "add-todo"       v-add-todo
-   "add-todo-text"  v-add-todo-text
-   "add-three"      v-add-three
-   "complete-todo"  v-complete-todo
-   "delete-todo"    v-delete-todo
-   "count-display"   v-count-display
-   "filter-buttons"  v-filter-buttons
-   "input-refocused" v-input-refocused})
+  [#'v-empty-state
+   #'v-has-input
+   #'v-has-heading
+   #'v-add-todo
+   #'v-add-todo-text
+   #'v-add-three
+   #'v-complete-todo
+   #'v-delete-todo
+   #'v-count-display
+   #'v-filter-buttons
+   #'v-input-refocused])
 
 (defn run-all! [url]
   (with-browser
     (println (str "Testing " url))
     (println (apply str (repeat 50 "─")))
     (let [fails (atom 0)]
-      (doseq [[vname validator] all-validators]
-        (print (str "  " vname "... "))
-        (flush)
-        (try
-          (let [result (validator url)]
-            (if (:ok result)
-              (println "✓")
-              (do
-                (println (str "✗  " (:message result)))
-                (swap! fails inc)
-                (report-failure vname result))))
-          (catch Exception e
-            (println (str "ERROR: " (.getMessage e)))
-            (swap! fails inc))))
+      (doseq [v all-validators]
+        (let [vname (-> v meta :name str)]
+          (print (str "  " vname "... "))
+          (flush)
+          (try
+            (let [result (v url)]
+              (if (:ok result)
+                (println "✓")
+                (do
+                  (println (str "✗  " (:message result)))
+                  (swap! fails inc)
+                  (report-failure vname result))))
+            (catch Exception e
+              (println (str "ERROR: " (.getMessage e)))
+              (swap! fails inc)))))
       (println)
       @fails)))
