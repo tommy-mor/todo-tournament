@@ -81,13 +81,6 @@
     `[:input {:type "hidden" :name "evaleval-snippet" :value (sign ~signed)}]))
 
 ;; ---------------------------------------------------------------------------
-;; Form helper — defaults to POST / with display:contents (inline in flow)
-;; ---------------------------------------------------------------------------
-
-(defn form [& children]
-  (into [:form {:action "/" :method "post" :style "display:contents"}] children))
-
-;; ---------------------------------------------------------------------------
 ;; POST handler
 ;; ---------------------------------------------------------------------------
 

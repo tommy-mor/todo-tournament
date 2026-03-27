@@ -34,30 +34,30 @@
        (str (count (remove :done @todos)) " items left")]
       [:div.todo-filters {:id "filters"}
        (for [[label f] [["All" :all] ["Active" :active] ["Completed" :completed]]]
-         (e/form
+         [:form {:method "post" :style "display:contents"}
           (e/server
            (do (reset! filt ~f)
                (e/js (e/morph "#todo-list" (todo-list))
                      (e/morph "#footer" (footer)))))
-          [:button.todo-filter__btn {:type "submit"} label]))]))])
+          [:button.todo-filter__btn {:type "submit"} label]])]))])
 
 (defn todo-item [t]
   [:li.todo-item {:id (str "todo-" (:id t))
                   :class (when (:done t) "todo-item todo-item--done")}
-   (e/form
+   [:form {:method "post" :style "display:contents"}
     (e/server
      (do (swap! todos (fn [ts] (mapv #(if (= ~(:id t) (:id %)) (update % :done not) %) ts)))
          (e/js (e/morph ~(str "#todo-" (:id t))
                         (todo-item (first (filter #(= ~(:id t) (:id %)) @todos))))
                (e/morph "#footer" (footer)))))
-    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}])
+    [:input.todo-item__toggle {:type "checkbox" :checked (when (:done t) true)}]]
    [:span {:class (when (:done t) "todo-item__text--done")} (:text t)]
-   (e/form
+   [:form {:method "post" :style "display:contents"}
     (e/server
      (do (swap! todos (fn [ts] (vec (remove #(= ~(:id t) (:id %)) ts))))
          (e/js (e/remove-el ~(str "#todo-" (:id t)))
                (e/morph "#footer" (footer)))))
-    [:button.todo-item__delete {:type "submit"} "×"])])
+    [:button.todo-item__delete {:type "submit"} "×"]]])
 
 (defn todo-list []
   [:ul.todo-list {:id "todo-list"}
