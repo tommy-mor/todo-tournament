@@ -202,16 +202,20 @@
   (with-browser
     (println (str "Testing " url))
     (println (apply str (repeat 50 "─")))
-    (doseq [[vname validator] all-validators]
-      (print (str "  " vname "... "))
-      (flush)
-      (try
-        (let [result (validator url)]
-          (if (:ok result)
-            (println "ok")
-            (do
-              (println (str "FAIL: " (:message result)))
-              (report-failure vname result))))
-        (catch Exception e
-          (println (str "ERROR: " (.getMessage e))))))
-    (println)))
+    (let [fails (atom 0)]
+      (doseq [[vname validator] all-validators]
+        (print (str "  " vname "... "))
+        (flush)
+        (try
+          (let [result (validator url)]
+            (if (:ok result)
+              (println "✓")
+              (do
+                (println (str "✗  " (:message result)))
+                (swap! fails inc)
+                (report-failure vname result))))
+          (catch Exception e
+            (println (str "ERROR: " (.getMessage e)))
+            (swap! fails inc))))
+      (println)
+      @fails)))
