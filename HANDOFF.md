@@ -1,5 +1,34 @@
 # Handoff: browser algebra via trail navigators
 
+## What's broken and why
+
+The design is right. The execution model is wrong.
+
+**The design**: navigators are both filters AND actions. A path IS the test:
+```clojure
+(t/validate [(s/open url) (t/role "textbox") (s/fill "buy milk") (s/press "Enter") (t/role "listitem")] [])
+```
+
+**What goes wrong**: action navigators call `clojure.java.shell/sh` to run `spel` subprocesses. This blocks the JVM thread. Spel's daemon is stateful — it keeps a headless Chrome alive between commands. When the daemon wedges (browser closed, stale session, pipe not flushed), `sh/sh` blocks forever. The nREPL thread is dead. You have to kill and restart everything.
+
+The failure cascade:
+1. `spel open` → launches browser daemon (if not running), navigates
+2. `spel fill @ref "text"` → talks to daemon over IPC
+3. If daemon is in bad state → `sh/sh` hangs waiting for stdout
+4. nREPL eval is blocked → REPL is dead
+5. Kill nREPL, kill spel, kill chrome, restart everything
+6. Python app still has old todos in memory → tests fail because state is dirty
+
+**Three separate problems**:
+1. **sh/sh blocks on spel** — need ProcessBuilder with timeout, or run spel from babashka/shell instead of JVM
+2. **spel daemon state is fragile** — `spel close` + `spel open` between tests, or kill daemon between validators
+3. **Python app state persists** — need to restart app between test runs, or add a `/reset` endpoint
+
+**Possible fixes (pick one)**:
+- **Option A**: Replace `sh/sh` with `ProcessBuilder` + timeout. Kill process after 10s. Catch TimeoutException in the navigator.
+- **Option B**: Compile the navigator path to a babashka script. Run it outside the JVM. Parse results back.
+- **Option C**: Use spel's Clojure SCI scripting (`spel eval-sci '...'`) to run the whole test in spel's process, not the JVM's.
+
 ## What exists
 
 - **tommy-mor/trail** (`tommy-mor.trail`): path-based validator. A path is a sequence of `{:name str :match (fn [els] els)}` steps. `(validate path els)` reduces steps over a flat list of maps. When a step matches nothing, the trail of names IS the error message. 19 tests, stable.
