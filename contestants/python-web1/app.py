@@ -43,9 +43,9 @@ def todo_item(todo):
     return ["li",
         ["form", {"method": "post", "action": f"/toggle/{tid}",
                   "style": "display:inline"},
-            ["button", {"type": "submit",
-                        "style": "background:none; border:none; cursor:pointer; font-size:18px;"},
-                "☑" if todo["done"] else "☐"]],
+            ["input", {"type": "checkbox",
+                       **({"checked": "true"} if todo["done"] else {}),
+                       "onchange": "this.form.submit()"}]],
         ["span", {"style": "text-decoration: line-through;" if todo["done"] else ""},
             todo["text"]],
         ["form", {"method": "post", "action": f"/delete/{tid}",
@@ -87,10 +87,7 @@ def page():
                 ["div", {"style": "margin-top:12px;"},
                     ["form", {"method": "post", "action": "/toggle-all",
                               "style": "display:inline;"},
-                        ["label",
-                            ["input", {"type": "checkbox",
-                                       **({"checked": "true"} if all(t["done"] for t in TODOS) else {})}],
-                            " Toggle all"]],
+                        ["button", {"type": "submit"}, "Toggle all"]],
                     ["ul", {"style": "list-style:none; padding:0; margin:12px 0;"},
                         *[todo_item(t) for t in todos]]]]),
 
@@ -169,6 +166,7 @@ async def clear_completed():
     return RedirectResponse("/", status_code=303)
 
 
+@app.get("/reset")
 @app.post("/reset")
 async def reset():
     global TODOS, FILTER
