@@ -15,13 +15,14 @@ declare -A PORTS=(
     ["clojure-evaleval"]=4002
     ["python-evaleval"]=4003
     ["racket-evaleval"]=4004
+    ["clojure-buzz"]=4005
 )
 
 # Start all contestants in background
 echo -e "${YELLOW}Starting all contestants...${NC}"
 declare -A PIDS
 
-for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval; do
+for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval clojure-buzz; do
     port=${PORTS[$contestant]}
     contestant_dir="$REPO_ROOT/contestants/$contestant"
 
@@ -40,7 +41,7 @@ done
 
 # Wait for all services to be ready
 echo -e "${YELLOW}Waiting for services to start...${NC}"
-for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval; do
+for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval clojure-buzz; do
     port=${PORTS[$contestant]}
     max_attempts=30
     attempt=0
@@ -68,7 +69,7 @@ echo
 
 total_failures=0
 
-for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval; do
+for contestant in python-web1 clojure-evaleval python-evaleval racket-evaleval clojure-buzz; do
     port=${PORTS[$contestant]}
     url="http://localhost:$port"
 

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>TodoMVC — Buzz</title>
+    <style nonce="NONCE">
+      .todo-app {
+        max-width: 550px;
+        margin: 40px auto;
+        font-family: system-ui, sans-serif;
+      }
+      .todo-app__title {
+        text-align: center;
+        font-weight: 100;
+        font-size: 48px;
+        color: #c33;
+        margin-bottom: 20px;
+      }
+      .todo-new-input {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      .todo-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .todo-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .todo-item--done { opacity: 0.5; }
+      .todo-item__text--done { text-decoration: line-through; }
+      .todo-item__delete {
+        margin-left: auto;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: #c33;
+      }
+      .todo-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        color: #666;
+        font-size: 14px;
+      }
+      .todo-filters { display: flex; gap: 8px; }
+      .todo-filter__btn {
+        cursor: pointer;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 2px 8px;
+        background: none;
+      }
+      .todo-filter__btn--active { border-color: #333; }
+    </style>
+  </head>
+  <body>
+    <div id="app"><!--app--></div>
+    <script type="importmap" nonce="NONCE">
+      {"imports": {"squint-cljs/core.js": "https://esm.sh/squint-cljs@0.14.208/core.js"}}
+    </script>
+    <script type="module" src="/client.mjs"></script>
+  </body>
+</html>

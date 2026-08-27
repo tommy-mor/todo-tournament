@@ -1,0 +1,4 @@
+{:paths ["src"]
+ :deps {io.github.borkdude/buzz
+        {:git/sha "3b29046ed1db7231bcd7d2ccce280c7d57e84542"}}
+ :aliases {:serve {:main-opts ["-m" "todo.core"]}}}

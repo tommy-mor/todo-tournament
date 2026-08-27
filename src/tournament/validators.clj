@@ -15,7 +15,8 @@
 (defn- snap-els!
   "Take an ARIA snapshot, return flat list of element maps with :id."
   []
-  (page/wait-for-load-state *page* :networkidle)
+  ;; :networkidle never settles for SSE contestants (Buzz keeps a stream open).
+  (page/wait-for-load-state *page* :load)
   (let [snap (snapshot/capture-snapshot *page* {:interactive? true})]
     (->> (:refs snap)
          (map (fn [[id attrs]] (assoc attrs :id (name id))))
