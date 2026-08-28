@@ -1,0 +1,190 @@
+// todo.hop — the durable-hop tournament entry: TodoMVC as one fullstack
+// .hop file on the durable store.
+//
+//   START.sh <port> [ws_port]   (builds hopd + hop-web wasm if needed)
+//
+// State lives in the JSONL tape + RocksDB projection: restart hopd and the
+// board comes back. /reset appends a reset event through the same reducer,
+// so the tape stays the single source of truth.
+
+server let schema = store.record([
+  ["todos", store.map(store.record([
+    ["text", store.leaf],
+    ["done", store.leaf]
+  ]))],
+  ["filter", store.leaf]
+]);
+
+fn reduce(tx, event) {
+  if event.type == "add" {
+    tx.set(["todos", tx.seq], { text = event.text, done = false });
+  } else {
+    if event.type == "toggle" {
+      let done = tx.get(["todos", event.id, "done"]);
+      tx.set(["todos", event.id, "done"], !done);
+    } else {
+      if event.type == "delete" {
+        tx.delete(["todos", event.id]);
+      } else {
+        if event.type == "filter" {
+          tx.set(["filter"], event.filt);
+        } else {
+          if event.type == "reset" {
+            tx.clear(["todos"]);
+            tx.set(["filter"], "all");
+          }
+        }
+      }
+    }
+  }
+}
+
+// -- server-side reads -------------------------------------------------------
+
+fn current_filter() {
+  let f = store.get(["filter"]);
+  if !f {
+    f = "all";
+  }
+  return f;
+}
+
+// Every state change lands here: read the projection, re-render every tab.
+// `focus` asks the browsers to put the caret back in the draft input —
+// hui re-renders replace the node, so focus would otherwise be lost.
+fn render_all(focus) {
+  let items = store.items(["todos"]);
+  let filt = current_filter();
+  cast browsers {
+    hui.render("#app", app_view(items, filt));
+    if focus {
+      dom.focus("#draft");
+    }
+  }
+}
+
+// -- views (pure: run on both sides) -----------------------------------------
+
+fn filter_button(label, f, filt) {
+  return [:button, {
+    class = filt == f && "on",
+    onclick = fn(e) { set_filter(f); }
+  }, label];
+}
+
+fn footer(items, filt) {
+  let active = 0;
+  for i, item in items {
+    if !item.done {
+      active = active + 1;
+    }
+  }
+  return [:footer, { class = "meta" },
+    [:span, { id = "count" }, "" .. active .. " items left"],
+    [:span, { class = "filters" },
+      filter_button("All", "all", filt),
+      filter_button("Active", "active", filt),
+      filter_button("Completed", "completed", filt)
+    ]
+  ];
+}
+
+fn todo_row(item) {
+  let id = item.id;
+  return [:li, { class = item.done && "done" },
+    [:input, {
+      type = "checkbox",
+      checked = item.done,
+      onclick = fn(e) { toggle_todo(id); }
+    }],
+    [:span, { class = "text" }, item.text],
+    [:button, { class = "del", onclick = fn(e) { delete_todo(id); } }, "×"]
+  ];
+}
+
+fn todo_list(items, filt) {
+  let rows = [];
+  for i, item in items {
+    let show = filt == "all"
+      || (filt == "active" && !item.done)
+      || (filt == "completed" && item.done);
+    if show {
+      push(rows, todo_row(item));
+    }
+  }
+  return [:ul, { id = "todos" }, rows];
+}
+
+fn app_view(items, filt) {
+  let foot = [];
+  if len(items) > 0 {
+    foot = footer(items, filt);
+  }
+  return [:div, {},
+    [:h1, {}, "todos"],
+    [:div, { class = "row" },
+      [:input, {
+        id = "draft",
+        type = "text",
+        placeholder = "what needs doing?",
+        autocomplete = "off",
+        onkeydown = fn(e) {
+          if e.key == "Enter" {
+            add_from_form();
+          }
+        }
+      }],
+      [:button, { id = "add", onclick = fn(e) { add_from_form(); } }, "add"]
+    ],
+    todo_list(items, filt),
+    foot
+  ];
+}
+
+// -- actions (start in a browser, hop to the server) --------------------------
+
+fn add_from_form() {
+  let text = dom.get("#draft");
+  if text != "" {
+    add_todo(text);
+  }
+}
+
+fn add_todo(text) {
+  server!();
+  store.append({ type = "add", text = text });
+  render_all(true);
+}
+
+fn toggle_todo(id) {
+  server!();
+  store.append({ type = "toggle", id = id });
+  render_all(false);
+}
+
+fn delete_todo(id) {
+  server!();
+  store.append({ type = "delete", id = id });
+  render_all(false);
+}
+
+fn set_filter(f) {
+  server!();
+  store.append({ type = "filter", filt = f });
+  render_all(false);
+}
+
+// -- hooks fired by hopd ------------------------------------------------------
+
+fn on_connect(sid) {
+  let items = store.items(["todos"]);
+  let filt = current_filter();
+  cast session(sid) {
+    hui.render("#app", app_view(items, filt));
+  }
+}
+
+fn on_reset() {
+  store.append({ type = "reset" });
+  render_all(false);
+}
