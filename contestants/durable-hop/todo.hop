@@ -15,26 +15,24 @@ server let schema = store.record([
   ["filter", store.leaf]
 ]);
 
-fn reduce(tx, event) {
-  if event.type == "add" {
-    tx.set(["todos", tx.seq], { text = event.text, done = false });
-  } else {
-    if event.type == "toggle" {
-      let done = tx.get(["todos", event.id, "done"]);
-      tx.set(["todos", event.id, "done"], !done);
-    } else {
-      if event.type == "delete" {
-        tx.delete(["todos", event.id]);
-      } else {
-        if event.type == "filter" {
-          tx.set(["filter"], event.filt);
-        } else {
-          if event.type == "reset" {
-            tx.clear(["todos"]);
-            tx.set(["filter"], "all");
-          }
-        }
-      }
+fn reduce(event) {
+  match event {
+    add { seq, text } => {
+      store(["todos", seq, store.set({ text = text, done = false })]);
+    }
+    toggle { id } => {
+      let done = store(["todos", id, "done"]);
+      store(["todos", id, "done", store.set(!done)]);
+    }
+    delete { id } => {
+      store(["todos", id, store.del]);
+    }
+    filter { filt } => {
+      store(["filter", store.set(filt)]);
+    }
+    reset => {
+      store(["todos", store.del]);
+      store(["filter", store.set("all")]);
     }
   }
 }
@@ -42,7 +40,7 @@ fn reduce(tx, event) {
 // -- server-side reads -------------------------------------------------------
 
 fn current_filter() {
-  let f = store.get(["filter"]);
+  let f = store(["filter"]);
   if !f {
     f = "all";
   }
